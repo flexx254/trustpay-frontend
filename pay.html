@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TrustPay - Pay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      text-align: center;
+      color: #1e293b;
+    }
+
+    .info {
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      color: #475569;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 0.9rem;
+      margin-bottom: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    button {
+      width: 100%;
+      background: #0f766e;
+      color: white;
+      font-weight: bold;
+      border: none;
+      padding: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 1rem;
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Complete Your Payment</h2>
+    <div class="info" id="product-info">Loading product...</div>
+
+    <input type="text" id="buyerName" placeholder="Your Full Name" required />
+    <input type="email" id="buyerEmail" placeholder="Your Email" required />
+    <button id="payNow">Pay Now</button>
+
+    <div class="message" id="payment-msg"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('product_id');
+
+    const productInfo = document.getElementById('product-info');
+    const payBtn = document.getElementById('payNow');
+    const msg = document.getElementById('payment-msg');
+
+    let product = null;
+
+    async function loadProduct() {
+      if (!productId) {
+        productInfo.innerHTML = '<span class="error">Missing product ID.</span>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://trustpay-backend.onrender.com/product?product_id=${productId}`);
+        const data = await res.json();
+
+        if (res.ok) {
+          product = data;
+          productInfo.innerHTML = `<strong>Product:</strong> ${product.product_name}<br><strong>Amount:</strong> KES ${product.amount}`;
+        } else {
+          productInfo.innerHTML = '<span class="error">Product not found.</span>';
+        }
+      } catch (err) {
+        productInfo.innerHTML = '<span class="error">Server error.</span>';
+      }
+    }
+
+    payBtn.addEventListener('click', async () => {
+      const buyerName = document.getElementById('buyerName').value.trim();
+      const buyerEmail = document.getElementById('buyerEmail').value.trim();
+
+      if (!buyerName || !buyerEmail || !product) {
+        msg.innerHTML = '<span class="error">All fields are required.</span>';
+        return;
+      }
+
+      // Simulate payment link to Flutterwave test
+      const flutterwaveTestLink = `https://flutterwave.com/pay/test-payment-link?amount=${product.amount}&email=${encodeURIComponent(buyerEmail)}&name=${encodeURIComponent(buyerName)}&redirect_url=https://yourdomain.com/thank-you.html?product_id=${productId}`;
+
+      // Optional: record buyer engagement to backend (status = 'held')
+      try {
+        await fetch('https://trustpay-backend.onrender.com/mark-held', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: productId, buyer_email: buyerEmail, buyer_name: buyerName })
+        });
+      } catch (e) {
+        console.log('Could not update backend before payment');
+      }
+
+      window.location.href = flutterwaveTestLink;
+    });
+
+    loadProduct();
+  </script>
+</body>
+</html>
+
