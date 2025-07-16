@@ -1,60 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>TrustPay - Products</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       font-family: 'Inter', sans-serif;
-      margin: 0;
-      padding: 0;
       background: #f8fafc;
-    }
-
-    .container {
-      max-width: 500px;
-      margin: auto;
+      margin: 0;
       padding: 1rem;
     }
 
-    h2 {
+    h2, h3 {
       text-align: center;
+      margin-bottom: 1rem;
       color: #1e293b;
     }
 
-    .welcome {
-      text-align: center;
-      margin-bottom: 1rem;
-      color: #475569;
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      background: white;
-      padding: 1rem;
+    .product-form,
+    .product-list,
+    .transaction-list {
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      background: #ffffff;
+      padding: 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
-      margin-bottom: 2rem;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
     }
 
-    input {
-      padding: 0.9rem;
-      font-size: 1rem;
+    input[type="text"],
+    input[type="number"],
+    #searchInput {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
       border-radius: 8px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid #ccc;
+      font-size: 1rem;
     }
 
     button {
-      background: #2563eb;
+      width: 100%;
+      padding: 0.75rem;
+      background: #1e293b;
       color: white;
-      padding: 0.9rem;
       font-weight: bold;
       border: none;
       border-radius: 8px;
@@ -62,173 +52,187 @@
     }
 
     .product {
-      background: white;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1rem 0;
     }
 
-    .product-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
+    .product:last-child {
+      border-bottom: none;
     }
 
-    .product span {
-      font-size: 1rem;
-      color: #334155;
+    .product-title {
+      font-weight: bold;
+      font-size: 1.1rem;
     }
 
     .status {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .status.paid {
+      color: green;
       font-weight: bold;
     }
 
-    .pending {
-      color: orange;
+    .status.pending {
+      color: red;
+      font-weight: bold;
     }
 
-    .held {
-      color: #f59e0b;
-    }
-
-    .paid {
-      color: green;
-    }
-
-    .link-section {
+    .link {
       margin-top: 0.5rem;
+      word-break: break-word;
+      color: #0ea5e9;
       font-size: 0.9rem;
-      color: #1e40af;
     }
 
-    .link-section a {
-      word-break: break-word;
-      display: inline-block;
-      margin-top: 0.3rem;
+    #overlay {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #2563eb;
+      color: white;
+      padding: 1.2rem 2rem;
+      border-radius: 12px;
+      font-size: 1.3rem;
+      font-family: 'Georgia', serif;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      z-index: 9999;
+      display: none;
+      animation: fadeInOut 2.5s ease-in-out;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     @media (max-width: 500px) {
-      .product-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
+      .product-form,
+      .product-list,
+      .transaction-list {
+        padding: 1rem;
       }
     }
   </style>
 </head>
 <body>
+
   <div class="container">
-    <h2>TrustPay Products</h2>
-    <div class="welcome" id="welcome-msg">Loading user...</div>
+    <h2>My Products</h2>
+    <div id="overlay">🔗 Link generated! You can search by product name to see.</div>
 
-    <form id="product-form">
-      <input type="text" id="product-name" placeholder="Product Name" required />
+    <div class="product-form">
+      <input type="text" id="productName" placeholder="Product Name" required />
       <input type="number" id="amount" placeholder="Amount (KES)" required />
-      <button type="submit">Add Product</button>
-    </form>
-
-    <div id="product-list">
-      <!-- Products will appear here -->
+      <button id="addProduct">Add Product</button>
     </div>
+
+    <input type="text" id="searchInput" placeholder="Search product links..." />
+
+    <div class="product-list" id="productList">Loading products...</div>
+
+    <h3>Buyer Transactions</h3>
+    <div class="transaction-list" id="transactionList">Waiting for buyer engagement...</div>
   </div>
 
   <script>
-    const form = document.getElementById('product-form');
-    const list = document.getElementById('product-list');
-    const welcomeMsg = document.getElementById('welcome-msg');
+    const userId = localStorage.getItem('user_id');
+    const fullName = localStorage.getItem('full_name');
+    const productList = document.getElementById('productList');
+    const transactionList = document.getElementById('transactionList');
+    const searchInput = document.getElementById('searchInput');
+    const overlay = document.getElementById('overlay');
 
-    const user_id = localStorage.getItem('user_id');
-    const full_name = localStorage.getItem('full_name');
-
-    if (!user_id || !full_name) {
-      alert('You are not logged in. Redirecting...');
-      window.location.href = 'login.html';
+    if (!userId) {
+      productList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
     }
 
-    welcomeMsg.textContent = `Welcome, ${full_name}`;
-
-    const getStatusClass = (status) => {
-      if (status === 'paid') return 'paid';
-      if (status === 'held') return 'held';
-      return 'pending';
-    };
-
-    const getStatusLabel = (status) => {
-      if (status === 'paid') return 'Paid ✔️';
-      if (status === 'held') return 'Paid (Held) ⏳';
-      return 'Pending ⏱️';
-    };
-
-    async function loadProducts() {
-      list.innerHTML = 'Loading products...';
+    document.getElementById('addProduct').addEventListener('click', async () => {
+      const name = document.getElementById('productName').value.trim();
+      const amount = document.getElementById('amount').value.trim();
+      if (!name || !amount) return;
 
       try {
-        const response = await fetch('https://trustpay-backend.onrender.com/products?user_id=' + user_id);
-        const res = await response.json();
-
-        if (Array.isArray(res)) {
-          if (res.length === 0) {
-            list.innerHTML = '<p style="text-align:center;color:gray;">No products yet.</p>';
-            return;
-          }
-
-          list.innerHTML = '';
-          res.forEach(prod => {
-            const div = document.createElement('div');
-            div.className = 'product';
-
-            const payLink = `${window.location.origin}/pay.html?id=${prod.id}`;
-            const statusClass = getStatusClass(prod.status);
-            const statusLabel = getStatusLabel(prod.status);
-
-            div.innerHTML = `
-              <div class="product-header">
-                <span>${prod.product_name} - KES ${prod.amount}</span>
-                <span class="status ${statusClass}">${statusLabel}</span>
-              </div>
-              <div class="link-section">
-                Buyer Link:
-                <a href="${payLink}" target="_blank">${payLink}</a>
-              </div>
-            `;
-
-            list.appendChild(div);
-          });
-        } else {
-          list.innerHTML = '<p style="color:red;">Failed to fetch products.</p>';
-        }
-      } catch (err) {
-        list.innerHTML = '<p style="color:red;">Server error.</p>';
-      }
-    }
-
-    loadProducts();
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const product_name = document.getElementById('product-name').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
-
-      try {
-        const response = await fetch('https://trustpay-backend.onrender.com/add-product', {
+        const res = await fetch('https://trustpay-backend.onrender.com/add-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id, product_name, amount })
+          body: JSON.stringify({ user_id: userId, product_name: name, amount })
         });
 
-        const res = await response.json();
-        if (response.ok) {
-          form.reset();
-          loadProducts();
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('productName').value = '';
+          document.getElementById('amount').value = '';
+          showOverlay();
+          fetchProducts();
         } else {
-          alert(res.error || 'Failed to add product');
+          alert(data.error || 'Failed to add product');
         }
       } catch (err) {
-        alert('Server error');
+        alert('Server error. Try again later.');
       }
+    });
+
+    function showOverlay() {
+      overlay.style.display = 'block';
+      setTimeout(() => overlay.style.display = 'none', 2500);
+    }
+
+    async function fetchProducts() {
+      try {
+        const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${userId}`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          renderProducts(data);
+        } else {
+          productList.innerHTML = '<p style="color:red;">Failed to load products.</p>';
+        }
+      } catch (err) {
+        productList.innerHTML = '<p style="color:red;">Server error.</p>';
+      }
+    }
+
+    function renderProducts(products) {
+      productList.innerHTML = '';
+      products
+        .sort((a, b) => b.id - a.id)
+        .forEach(prod => {
+          const div = document.createElement('div');
+          div.className = 'product';
+          div.innerHTML = `
+            <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
+            <div class="status ${prod.status === 'paid' ? 'paid' : prod.status === 'held' ? 'pending' : 'pending'}">
+              ${prod.status === 'paid' ? 'PAID' : prod.status === 'held' ? 'PAID BUT HELD' : 'PENDING'}
+            </div>
+            <div class="link">
+              <strong>Client Link:</strong><br>
+              <a href="pay.html?product_id=${prod.id}" target="_blank">
+                https://yourdomain.com/pay.html?product_id=${prod.id}
+              </a>
+            </div>
+          `;
+          productList.appendChild(div);
+        });
+    }
+
+    searchInput.addEventListener('input', () => {
+      const term = searchInput.value.toLowerCase();
+      const products = document.querySelectorAll('.product');
+      products.forEach(p => {
+        const title = p.querySelector('.product-title').textContent.toLowerCase();
+        p.style.display = title.includes(term) ? '' : 'none';
+      });
+    });
+
+    window.addEventListener('load', () => {
+      if (!userId) return;
+      fetchProducts();
     });
   </script>
 </body>
-</html>
+  </html>
