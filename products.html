@@ -1,60 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>TrustPay - Products</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       font-family: 'Inter', sans-serif;
       margin: 0;
-      padding: 0;
-      background: #f8fafc;
-    }
-
-    .container {
-      max-width: 500px;
-      margin: auto;
       padding: 1rem;
+      background: #f8fafc;
     }
 
     h2 {
       text-align: center;
-      color: #1e293b;
-    }
-
-    .welcome {
-      text-align: center;
       margin-bottom: 1rem;
-      color: #475569;
     }
 
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      background: white;
-      padding: 1rem;
+    .product-form,
+    .product-list {
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      background: #ffffff;
+      padding: 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
-      margin-bottom: 2rem;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
     }
 
-    input {
-      padding: 0.9rem;
-      font-size: 1rem;
+    .product-form input {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
       border-radius: 8px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid #ccc;
+      font-size: 1rem;
     }
 
-    button {
-      background: #2563eb;
+    .product-form button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #1e293b;
       color: white;
-      padding: 0.9rem;
       font-weight: bold;
       border: none;
       border-radius: 8px;
@@ -62,157 +48,136 @@
     }
 
     .product {
-      background: white;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1rem 0;
     }
 
-    .product span {
-      font-size: 1rem;
-      color: #334155;
+    .product:last-child {
+      border-bottom: none;
+    }
+
+    .product-title {
+      font-weight: bold;
+      font-size: 1.1rem;
     }
 
     .status {
-      font-weight: bold;
-      color: orange;
+      margin-top: 0.3rem;
+      font-size: 0.9rem;
+      color: #475569;
     }
 
-    .paid {
+    .status.paid {
       color: green;
+      font-weight: bold;
+    }
+
+    .status.pending {
+      color: red;
+      font-weight: bold;
+    }
+
+    .link {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      word-break: break-all;
+      color: #0ea5e9;
     }
 
     @media (max-width: 500px) {
-      .product {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-      }
-
-      form {
-        gap: 0.7rem;
+      .product-form,
+      .product-list {
+        padding: 1rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>TrustPay Products</h2>
-    <div class="welcome" id="welcome-msg">Loading user...</div>
 
-    <form id="product-form">
-      <input type="text" id="product-name" placeholder="Product Name" required />
-      <input type="number" id="amount" placeholder="Amount (KES)" required />
-      <button type="submit">Add Product</button>
-    </form>
+  <h2>My Products</h2>
 
-    <div id="product-list">
-      <!-- Products will appear here -->
-    </div>
+  <div class="product-form">
+    <input type="text" id="productName" placeholder="Product Name" required />
+    <input type="number" id="amount" placeholder="Amount (KES)" required />
+    <button id="addProduct">Add Product</button>
+  </div>
+
+  <div class="product-list" id="productList">
+    Loading products...
   </div>
 
   <script>
-    const form = document.getElementById('product-form');
-    const list = document.getElementById('product-list');
-    const welcomeMsg = document.getElementById('welcome-msg');
+    const userId = localStorage.getItem('user_id');
+    const fullName = localStorage.getItem('full_name');
+    const productList = document.getElementById('productList');
+    const addBtn = document.getElementById('addProduct');
 
-    const user_id = localStorage.getItem('user_id');
-    const full_name = localStorage.getItem('full_name');
-
-    if (!user_id || !full_name) {
-      alert('You are not logged in. Redirecting...');
-      window.location.href = 'login.html';
+    if (!userId) {
+      productList.innerHTML = '<p style="color: red;">You are not logged in.</p>';
     }
 
-    welcomeMsg.textContent = `Welcome, ${full_name}`;
-
-    // Load products on page load
-    async function loadProducts() {
-      list.innerHTML = 'Loading products...';
-
+    async function fetchProducts() {
+      productList.innerHTML = 'Loading products...';
       try {
-        const response = await fetch('https://trustpay-backend.onrender.com/products?user_id=' + user_id);
-        const res = await response.json();
+        const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${userId}`);
+        const data = await res.json();
 
-        if (Array.isArray(res)) {
-          if (res.length === 0) {
-            list.innerHTML = '<p style="text-align:center;color:gray;">No products yet.</p>';
+        if (res.ok) {
+          if (data.length === 0) {
+            productList.innerHTML = '<p>No products added yet.</p>';
             return;
           }
 
-          list.innerHTML = '';
-          res.forEach(prod => {
+          productList.innerHTML = '';
+          data.forEach(prod => {
             const div = document.createElement('div');
             div.className = 'product';
-
             div.innerHTML = `
-              <span>${prod.product_name} - KES ${prod.amount}</span>
-              <span class="status ${prod.status === 'paid' ? 'paid' : ''}">
-                ${prod.status === 'paid' ? 'Paid' : 'Pending'}
-              </span>
-              ${prod.status === 'pending' ? `<button onclick="markPaid('${prod.id}')">Mark as Paid</button>` : ''}
+              <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
+              <div class="status ${prod.paid ? 'paid' : 'pending'}">${prod.paid ? 'PAID' : 'PENDING PAYMENT'}</div>
+              <div class="link">Client Link: <br> <a href="pay.html?product_id=${prod.id}" target="_blank">https://yourdomain.com/pay.html?product_id=${prod.id}</a></div>
             `;
-            list.appendChild(div);
+            productList.appendChild(div);
           });
         } else {
-          list.innerHTML = '<p style="color:red;">Failed to fetch products.</p>';
+          productList.innerHTML = '<p style="color:red;">Failed to load products.</p>';
         }
       } catch (err) {
-        list.innerHTML = '<p style="color:red;">Server error.</p>';
+        productList.innerHTML = '<p style="color:red;">Server error. Try again later.</p>';
       }
     }
 
-    loadProducts();
+    addBtn.addEventListener('click', async () => {
+      const productName = document.getElementById('productName').value.trim();
+      const amount = document.getElementById('amount').value.trim();
 
-    // Add new product
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const product_name = document.getElementById('product-name').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
+      if (!productName || !amount) return;
 
       try {
-        const response = await fetch('https://trustpay-backend.onrender.com/add-product', {
+        const res = await fetch('https://trustpay-backend.onrender.com/add-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id, product_name, amount })
+          body: JSON.stringify({
+            user_id: userId,
+            product_name: productName,
+            amount: amount
+          })
         });
 
-        const res = await response.json();
-        if (response.ok) {
-          form.reset();
-          loadProducts();
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('productName').value = '';
+          document.getElementById('amount').value = '';
+          fetchProducts();
         } else {
-          alert(res.error || 'Failed to add product');
+          alert(data.error || 'Failed to add product');
         }
       } catch (err) {
-        alert('Server error');
+        alert('Server error. Try again later.');
       }
     });
 
-    // Mark as paid
-    async function markPaid(productId) {
-      try {
-        const response = await fetch('https://trustpay-backend.onrender.com/mark-paid', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: productId })
-        });
-
-        const res = await response.json();
-        if (response.ok) {
-          loadProducts();
-        } else {
-          alert(res.error || 'Failed to mark as paid');
-        }
-      } catch (err) {
-        alert('Server error');
-      }
-    }
+    fetchProducts();
   </script>
 </body>
 </html>
