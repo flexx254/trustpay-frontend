@@ -75,65 +75,70 @@
 
     <div class="message" id="payment-msg"></div>
   </div>
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const productId = urlParams.get('product_id');
 
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const productId = urlParams.get('product_id');
+  const productInfo = document.getElementById('product-info');
+  const payBtn = document.getElementById('payNow');
+  const msg = document.getElementById('payment-msg');
 
-    const productInfo = document.getElementById('product-info');
-    const payBtn = document.getElementById('payNow');
-    const msg = document.getElementById('payment-msg');
+  let product = null;
 
-    let product = null;
-
-    async function loadProduct() {
-      if (!productId) {
-        productInfo.innerHTML = '<span class="error">Missing product ID.</span>';
-        return;
-      }
-
-      try {
-        const res = await fetch(`https://trustpay-backend.onrender.com/product?product_id=${productId}`);
-        const data = await res.json();
-
-        if (res.ok && data && data.product_name) {
-          product = data;
-          productInfo.innerHTML = `<strong>Product:</strong> ${product.product_name}<br><strong>Amount:</strong> KES ${product.amount}`;
-        } else {
-          productInfo.innerHTML = '<span class="error">Product not found or invalid ID.</span>';
-          console.error('Invalid product response:', data);
-        }
-      } catch (err) {
-        productInfo.innerHTML = '<span class="error">Server error while fetching product.</span>';
-        console.error('Fetch error:', err);
-      }
+  async function loadProduct() {
+    if (!productId) {
+      productInfo.innerHTML = '<span class="error">Missing product ID.</span>';
+      return;
     }
 
-    payBtn.addEventListener('click', async () => {
-      const buyerName = document.getElementById('buyerName').value.trim();
-      const buyerEmail = document.getElementById('buyerEmail').value.trim();
+    try {
+      const res = await fetch(`https://trustpay-backend.onrender.com/product-details?product_id=${productId}`);
+      const data = await res.json();
 
-      if (!buyerName || !buyerEmail || !product) {
-        msg.innerHTML = '<span class="error">All fields are required.</span>';
-        return;
+      if (res.ok) {
+        product = data;  // data is the full product object
+        productInfo.innerHTML = `
+          <strong>Product:</strong> ${product.product_name}<br>
+          <strong>Amount:</strong> KES ${product.amount}
+        `;
+      } else {
+        productInfo.innerHTML = `<span class="error">${data.error || 'Product not found.'}</span>`;
       }
+    } catch (err) {
+      productInfo.innerHTML = '<span class="error">Server error. Please try again later.</span>';
+    }
+  }
 
-      const flutterwaveTestLink = `https://flutterwave.com/pay/test-payment-link?amount=${product.amount}&email=${encodeURIComponent(buyerEmail)}&name=${encodeURIComponent(buyerName)}&redirect_url=https://yourdomain.com/thank-you.html?product_id=${productId}`;
+  payBtn.addEventListener('click', async () => {
+    const buyerName = document.getElementById('buyerName').value.trim();
+    const buyerEmail = document.getElementById('buyerEmail').value.trim();
 
-      try {
-        await fetch('https://trustpay-backend.onrender.com/mark-held', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: productId, buyer_email: buyerEmail, buyer_name: buyerName })
-        });
-      } catch (e) {
-        console.warn('Failed to mark as held:', e);
-      }
+    if (!buyerName || !buyerEmail || !product) {
+      msg.innerHTML = '<span class="error">All fields are required.</span>';
+      return;
+    }
 
-      window.location.href = flutterwaveTestLink;
-    });
+    try {
+      await fetch('https://trustpay-backend.onrender.com/update-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: productId,
+          buyer_name: buyerName,
+          buyer_email: buyerEmail,
+          status: 'held'
+        })
+      });
 
-    loadProduct();
-  </script>
+      const flutterwaveLink = `https://flutterwave.com/pay/test-payment-link?amount=${product.amount}&email=${encodeURIComponent(buyerEmail)}&name=${encodeURIComponent(buyerName)}&redirect_url=https://yourdomain.com/thank-you.html?product_id=${productId}`;
+      window.location.href = flutterwaveLink;
+    } catch (err) {
+      msg.innerHTML = '<span class="error">Payment could not be initiated.</span>';
+    }
+  });
+
+  loadProduct();
+</script>
+  
 </body>
 </html>
