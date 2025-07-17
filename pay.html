@@ -62,6 +62,10 @@
     .error {
       color: red;
     }
+
+    a {
+      color: #0f766e;
+    }
   </style>
 </head>
 <body>
@@ -71,10 +75,11 @@
 
     <input type="text" id="buyerName" placeholder="Your Full Name" required />
     <input type="email" id="buyerEmail" placeholder="Your Email" required />
-    <button id="payNow">Pay Now</button>
+    <button id="payNow">Submit</button>
 
     <div class="message" id="payment-msg"></div>
   </div>
+
 <script>
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('product_id');
@@ -96,7 +101,7 @@
       const data = await res.json();
 
       if (res.ok) {
-        product = data;  // data is the full product object
+        product = data;
         productInfo.innerHTML = `
           <strong>Product:</strong> ${product.product_name}<br>
           <strong>Amount:</strong> KES ${product.amount}
@@ -119,7 +124,7 @@
     }
 
     try {
-      await fetch('https://trustpay-backend.onrender.com/update-payment', {
+      const res = await fetch('https://trustpay-backend.onrender.com/update-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,15 +135,21 @@
         })
       });
 
-      const flutterwaveLink = `https://flutterwave.com/pay/test-payment-link?amount=${product.amount}&email=${encodeURIComponent(buyerEmail)}&name=${encodeURIComponent(buyerName)}&redirect_url=https://yourdomain.com/thank-you.html?product_id=${productId}`;
-      window.location.href = flutterwaveLink;
+      if (res.ok) {
+        msg.innerHTML = `
+          Payment info submitted successfully!<br>
+          <a href="/mpesa.html?product_id=${productId}">Click here to complete payment via M-Pesa</a>
+        `;
+      } else {
+        const errorData = await res.json();
+        msg.innerHTML = `<span class="error">${errorData.error || 'Failed to update payment.'}</span>`;
+      }
     } catch (err) {
-      msg.innerHTML = '<span class="error">Payment could not be initiated.</span>';
+      msg.innerHTML = '<span class="error">Could not connect to server.</span>';
     }
   });
 
   loadProduct();
 </script>
-  
 </body>
 </html>
