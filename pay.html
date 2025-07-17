@@ -96,14 +96,16 @@
         const res = await fetch(`https://trustpay-backend.onrender.com/product?product_id=${productId}`);
         const data = await res.json();
 
-        if (res.ok) {
+        if (res.ok && data && data.product_name) {
           product = data;
           productInfo.innerHTML = `<strong>Product:</strong> ${product.product_name}<br><strong>Amount:</strong> KES ${product.amount}`;
         } else {
-          productInfo.innerHTML = '<span class="error">Product not found.</span>';
+          productInfo.innerHTML = '<span class="error">Product not found or invalid ID.</span>';
+          console.error('Invalid product response:', data);
         }
       } catch (err) {
-        productInfo.innerHTML = '<span class="error">Server error.</span>';
+        productInfo.innerHTML = '<span class="error">Server error while fetching product.</span>';
+        console.error('Fetch error:', err);
       }
     }
 
@@ -116,10 +118,8 @@
         return;
       }
 
-      // Simulate payment link to Flutterwave test
       const flutterwaveTestLink = `https://flutterwave.com/pay/test-payment-link?amount=${product.amount}&email=${encodeURIComponent(buyerEmail)}&name=${encodeURIComponent(buyerName)}&redirect_url=https://yourdomain.com/thank-you.html?product_id=${productId}`;
 
-      // Optional: record buyer engagement to backend (status = 'held')
       try {
         await fetch('https://trustpay-backend.onrender.com/mark-held', {
           method: 'POST',
@@ -127,7 +127,7 @@
           body: JSON.stringify({ product_id: productId, buyer_email: buyerEmail, buyer_name: buyerName })
         });
       } catch (e) {
-        console.log('Could not update backend before payment');
+        console.warn('Failed to mark as held:', e);
       }
 
       window.location.href = flutterwaveTestLink;
@@ -137,4 +137,3 @@
   </script>
 </body>
 </html>
-
