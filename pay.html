@@ -63,8 +63,40 @@
       color: red;
     }
 
-    a {
-      color: #0f766e;
+    /* Overlay styles */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #overlay-content {
+      background: white;
+      color: #1e293b;
+      padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 90%;
+      width: 400px;
+    }
+
+    #mpesa-number {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin: 1rem 0;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-left: 0.5rem;
     }
   </style>
 </head>
@@ -75,9 +107,24 @@
 
     <input type="text" id="buyerName" placeholder="Your Full Name" required />
     <input type="email" id="buyerEmail" placeholder="Your Email" required />
+    <input type="text" id="buyerMpesa" placeholder="Your M-PESA Number" required />
     <button id="payNow">Submit</button>
 
     <div class="message" id="payment-msg"></div>
+  </div>
+
+  <!-- Payment Overlay -->
+  <div id="overlay">
+    <div id="overlay-content">
+      <h3>Searching for Payment...</h3>
+      <p>Send the payment to the following M-PESA number:</p>
+      <div style="display:flex; justify-content:center; align-items:center;">
+        <span id="mpesa-number">072xxxxxxx</span>
+        <button class="copy-btn" onclick="copyMpesa()">📋</button>
+      </div>
+      <p>Once done, come back and click below:</p>
+      <button onclick="closeOverlay()">I Have Paid</button>
+    </div>
   </div>
 
 <script>
@@ -117,8 +164,9 @@
   payBtn.addEventListener('click', async () => {
     const buyerName = document.getElementById('buyerName').value.trim();
     const buyerEmail = document.getElementById('buyerEmail').value.trim();
+    const buyerMpesa = document.getElementById('buyerMpesa').value.trim();
 
-    if (!buyerName || !buyerEmail || !product) {
+    if (!buyerName || !buyerEmail || !buyerMpesa || !product) {
       msg.innerHTML = '<span class="error">All fields are required.</span>';
       return;
     }
@@ -131,15 +179,14 @@
           product_id: productId,
           buyer_name: buyerName,
           buyer_email: buyerEmail,
+          mpesa_number: buyerMpesa,
           status: 'held'
         })
       });
 
       if (res.ok) {
-        msg.innerHTML = `
-          Payment info submitted successfully!<br>
-          <a href="/mpesa.html?product_id=${productId}">Click here to complete payment via M-Pesa</a>
-        `;
+        // Show overlay instead of link
+        document.getElementById('overlay').style.display = 'flex';
       } else {
         const errorData = await res.json();
         msg.innerHTML = `<span class="error">${errorData.error || 'Failed to update payment.'}</span>`;
@@ -149,7 +196,19 @@
     }
   });
 
+  function copyMpesa() {
+    const number = document.getElementById('mpesa-number').innerText;
+    navigator.clipboard.writeText(number).then(() => {
+      alert("M-PESA number copied to clipboard.");
+    });
+  }
+
+  function closeOverlay() {
+    alert("Thanks! We will confirm your payment shortly.");
+    document.getElementById('overlay').style.display = 'none';
+  }
+
   loadProduct();
 </script>
 </body>
-</html>
+        </html>
