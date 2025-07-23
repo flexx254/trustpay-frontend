@@ -198,27 +198,24 @@
     }
 
     function renderProducts(products) {
-      productList.innerHTML = '';
-      products
-        .sort((a, b) => b.id - a.id)
-        .forEach(prod => {
-          const div = document.createElement('div');
-          div.className = 'product';
-          div.innerHTML = `
-            <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
-            <div class="status ${prod.status === 'paid' ? 'paid' : prod.status === 'held' ? 'pending' : 'pending'}">
-              ${prod.status === 'paid' ? 'PAID' : prod.status === 'held' ? 'PAID BUT HELD' : 'PENDING'}
-            </div>
-            <div class="link">
-              <strong>Client Link:</strong><br>
-              <a href="pay.html?product_id=${prod.id}" target="_blank">
-                https://yourdomain.com/pay.html?product_id=${prod.id}
-              </a>
-            </div>
-          `;
-          productList.appendChild(div);
-        });
-    }
+  productList.innerHTML = '';
+  products
+    .sort((a, b) => b.id - a.id)
+    .forEach(prod => {
+      const div = document.createElement('div');
+      div.className = 'product';
+      div.innerHTML = `
+        <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
+        <div class="link">
+          <strong>Client Link:</strong><br>
+          <a href="pay.html?product_id=${prod.id}" target="_blank">
+            https://yourdomain.com/pay.html?product_id=${prod.id}
+          </a>
+        </div>
+      `;
+      productList.appendChild(div);
+    });
+}
 
     searchInput.addEventListener('input', () => {
       const term = searchInput.value.toLowerCase();
