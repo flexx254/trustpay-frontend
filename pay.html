@@ -128,6 +128,8 @@
   </div>
 
 <script>
+
+  let buyerMpesa = "";
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('product_id');
 
@@ -164,7 +166,7 @@
   payBtn.addEventListener('click', async () => {
     const buyerName = document.getElementById('buyerName').value.trim();
     const buyerEmail = document.getElementById('buyerEmail').value.trim();
-    const buyerMpesa = document.getElementById('buyerMpesa').value.trim();
+    buyerMpesa = document.getElementById('buyerMpesa').value.trim();
 
     if (!buyerName || !buyerEmail || !buyerMpesa || !product) {
       msg.innerHTML = '<span class="error">All fields are required.</span>';
@@ -208,7 +210,7 @@
     const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ buyer_mpesa_number: buyerMpesa })
+      body: JSON.stringify({mpesa_number: buyerMpesa })
     });
 
     const result = await res.json();
