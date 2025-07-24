@@ -215,7 +215,7 @@
 
     const result = await res.json();
 
-    if (result.match) {
+    if (result.paid) {
       msg.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
     } else {
       msg.innerHTML = `<span class="error">❌ ${result.message}</span>`;
@@ -231,4 +231,4 @@
   window.addEventListener('load', loadProduct);
 </script>
 </body>
-        </html>
+</html>
