@@ -118,6 +118,18 @@
         padding: 1rem;
       }
     }
+
+
+    .status-box {
+  padding: 0.5rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  font-weight: bold;
+  color: white;
+}
+.status-paid-released { background-color: #16a34a; }  /* Green */
+.status-paid-held { background-color: #f59e0b; }      /* Amber */
+.status-pending { background-color: #ef4444; }        /* Red */
   </style>
 </head>
 <body>
@@ -182,25 +194,28 @@
       overlay.style.display = 'block';
       setTimeout(() => overlay.style.display = 'none', 2500);
     }
-
-    async function fetchProducts() {
-      try {
-        const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${userId}`);
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          renderProducts(data);
-        } else {
-          productList.innerHTML = '<p style="color:red;">Failed to load products.</p>';
-        }
-      } catch (err) {
-        productList.innerHTML = '<p style="color:red;">Server error.</p>';
-      }
+async function fetchProducts() {
+  try {
+    const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${userId}`);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      renderProducts(data);
+      renderTransactions(data); // 👈 ADD THIS LINE
+    } else {
+      productList.innerHTML = '<p style="color:red;">Failed to load products.</p>';
+    }
+  } catch (err) {
+    productList.innerHTML = '<p style="color:red;">Server error.</p>';
+  }
     }
 
     function renderProducts(products) {
   productList.innerHTML = '';
   products
-    .sort((a, b) => b.id - a.id)
+    .sort((a, b) => {
+  const priority = { 'paid-released': 0, 'paid-held': 1 };
+  return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
+})
     .forEach(prod => {
       const div = document.createElement('div');
       div.className = 'product';
@@ -216,6 +231,30 @@
       productList.appendChild(div);
     });
 }
+
+    function renderTransactions(products) {
+  transactionList.innerHTML = '';
+  const sorted = [...products].sort((a, b) => {
+    const priority = { 'paid-released': 0, 'paid-held': 1 };
+    return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
+  });
+
+  sorted.forEach(prod => {
+    const div = document.createElement('div');
+    const statusClass = prod.status === 'paid-released' ? 'status-paid-released'
+                      : prod.status === 'paid-held' ? 'status-paid-held'
+                      : 'status-pending';
+
+    div.className = 'product';
+    div.innerHTML = `
+      <div><strong>Product:</strong> ${prod.product_name}</div>
+      <div><strong>Buyer:</strong> ${prod.buyer_name || '—'}</div>
+      <div><strong>Phone:</strong> ${prod.mpesa_number || '—'}</div>
+      <div class="status-box ${statusClass}">${prod.status || 'pending'}</div>
+    `;
+    transactionList.appendChild(div);
+  });
+    }
 
     searchInput.addEventListener('input', () => {
       const term = searchInput.value.toLowerCase();
