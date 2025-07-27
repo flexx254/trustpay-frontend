@@ -239,7 +239,9 @@ async function fetchProducts() {
     return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
   });
 
-  sorted.forEach(prod => {
+  sorted
+  .filter(prod => prod.buyer_name || prod.mpesa_number || prod.status !== 'pending')
+  .forEach(prod => {
     const div = document.createElement('div');
     const statusClass = prod.status === 'paid-released' ? 'status-paid-released'
                       : prod.status === 'paid-held' ? 'status-paid-held'
