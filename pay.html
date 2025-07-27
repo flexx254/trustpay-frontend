@@ -129,6 +129,34 @@
 
 <script>
 
+  
+document.addEventListener('DOMContentLoaded', async () => {
+  const productId = new URLSearchParams(window.location.search).get('product_id');
+  if (!productId) return;
+
+  try {
+    const res = await fetch(`https://trustpay-backend.onrender.com/check-payment-status?product_id=${productId}`);
+    const data = await res.json();
+
+    if (data.paid) {
+      const overlay = document.getElementById('overlay');
+      if (overlay) {
+        overlay.innerHTML = `
+          <div id="overlay-content">
+            <p style="color: red; font-weight: bold;">
+              ✅ This product is already marked as paid.<br>
+              Please refresh the link to start over if needed.
+            </p>
+          </div>`;
+        overlay.style.display = 'flex';
+      }
+    }
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+  }
+});
+
+
   let buyerMpesa = "";
   const urlParams = new URLSearchParams(window.location.search);
   const productId = urlParams.get('product_id');
