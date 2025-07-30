@@ -253,11 +253,9 @@ async function fetchProducts() {
       <div><strong>Buyer:</strong> ${prod.buyer_name || '—'}</div>
       <div><strong>Phone:</strong> ${prod.mpesa_number || '—'}</div>
       <div class="status-box ${statusClass}">${prod.status || 'pending'}</div>
-      ${
-  prod.amount_paid
-    ? `<div><strong>Paid:</strong> KES ${prod.amount_paid} (${getPaymentDiff(prod.amount_paid, prod.amount)} KES)</div>`
-    : ''
-    }
+  <div><strong>Expected:</strong> KES ${prod.amount}</div>
+<div><strong>Paid:</strong> KES ${prod.amount_paid ?? '—'}</div>
+<div><strong>Difference:</strong> ${prod.amount_paid != null ? getPaymentDiff(prod.amount_paid, prod.amount) + ' KES' : '—'}</div>
     `;
     transactionList.appendChild(div);
   });
@@ -278,10 +276,10 @@ async function fetchProducts() {
     });
 
   function getPaymentDiff(paid, expected) {
-    const diff = paid - expected;
-    if (diff === 0) return "Exact";
-    return diff > 0 ? `Overpaid by ${diff}` : `Underpaid by ${Math.abs(diff)}`;
-  }
+  const diff = paid - expected;
+  if (diff === 0) return "Exact amount";
+  return diff > 0 ? `Overpaid by ${diff}` : `Underpaid by ${Math.abs(diff)}`;
+}
   </script>
 </body>
   </html>
