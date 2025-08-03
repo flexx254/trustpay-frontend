@@ -196,10 +196,7 @@
       productList.prepend(div); // insert on top
       showOverlay();
 
-      // Refresh entire product list after a short delay
-      setTimeout(() => {
-        fetchProducts();
-      }, 2500);
+      
 
     } else {
       alert(data.error || 'Failed to add product');
