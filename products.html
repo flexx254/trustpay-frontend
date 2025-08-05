@@ -225,12 +225,18 @@ async function fetchProducts() {
     }
 
     function renderProducts(products) {
-  productList.innerHTML = '';
-  products
-    .sort((a, b) => {
-  const priority = { 'paid-released': 0, 'paid-held': 1 };
-  return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
-})
+  productList.innerHTML = "";
+
+  products.forEach(product => {
+    const link = `${window.location.origin}/pay.html?product_id=${product.id}`;
+    const linkElement = document.createElement("p");
+    linkElement.innerHTML = `
+      <strong>Link:</strong>
+      <a href="${link}" target="_blank">${link}</a>
+    `;
+    productList.prepend(linkElement); // Show newest at the top
+  });
+}
     .forEach(prod => {
       const div = document.createElement('div');
       div.className = 'product';
