@@ -210,19 +210,20 @@
       setTimeout(() => overlay.style.display = 'none', 2500);
     }
 async function fetchProducts() {
+  const uid = localStorage.getItem('user_id');
   try {
-    const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${userId}`);
+    const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${uid}`);
     const data = await res.json();
     if (Array.isArray(data)) {
       renderProducts(data);
-      renderTransactions(data); // 👈 ADD THIS LINE
+      renderTransactions(data);
     } else {
       productList.innerHTML = '<p style="color:red;">Failed to load products.</p>';
     }
   } catch (err) {
     productList.innerHTML = '<p style="color:red;">Server error.</p>';
   }
-    }
+}
 
   function renderProducts(products) {
   productList.innerHTML = '';
@@ -284,10 +285,30 @@ async function fetchProducts() {
       });
     });
 
-    window.addEventListener('load', () => {
-      if (!userId) return;
-      fetchProducts();
-    });
+    
+  // Your other existing functions above...
+
+  // Helper: Wait for user_id to become available
+  async function waitForUserId() {
+    let uid = localStorage.getItem('user_id');
+    let retries = 10;
+    while (!uid && retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      uid = localStorage.getItem('user_id');
+      retries--;
+    }
+    return uid;
+  }
+
+  window.addEventListener('load', async () => {
+    const uid = await waitForUserId();
+    if (!uid) {
+      productList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
+      return;
+    }
+    fetchProducts();  // ⬅️ Loads products now that we are sure user_id is set
+  });
+
 
   function getPaymentDiff(paid, expected) {
   const diff = paid - expected;
