@@ -65,21 +65,6 @@
       font-size: 1.1rem;
     }
 
-    .status {
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-    }
-
-    .status.paid {
-      color: green;
-      font-weight: bold;
-    }
-
-    .status.pending {
-      color: red;
-      font-weight: bold;
-    }
-
     .link {
       margin-top: 0.5rem;
       word-break: break-word;
@@ -119,17 +104,16 @@
       }
     }
 
-
     .status-box {
-  padding: 0.5rem;
-  border-radius: 8px;
-  margin-top: 0.5rem;
-  font-weight: bold;
-  color: white;
-}
-.status-paid-released { background-color: #16a34a; }  /* Green */
-.status-paid-held { background-color: #f59e0b; }      /* Amber */
-.status-pending { background-color: #ef4444; }        /* Red */
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+      font-weight: bold;
+      color: white;
+    }
+    .status-paid-released { background-color: #16a34a; }
+    .status-paid-held { background-color: #f59e0b; }
+    .status-pending { background-color: #ef4444; }
   </style>
 </head>
 <body>
@@ -153,7 +137,6 @@
   </div>
 
   <script>
-
   const userId = localStorage.getItem('user_id');
   const fullName = localStorage.getItem('full_name');
   const productList = document.getElementById('productList');
@@ -178,14 +161,17 @@
       });
 
       const data = await res.json();
-      console.log("📥 Response from backend:", data); // ✅ ADD THIS FOR DEBUGGING
+      console.log("📥 Response from backend:", data);
 
-      if (res.ok && data.id) {
+      if (res.ok) {
         document.getElementById('productName').value = '';
         document.getElementById('amount').value = '';
 
-        const newProductId = data.id;
-        const link = `https://flexx254.github.io/trustpay-frontend/pay.html?product_id=${newProductId}`;
+        // Build link from product_name, amount, and user_id
+        const safeName = encodeURIComponent(name.replace(/\s+/g, '-'));
+        const safeAmount = encodeURIComponent(amount);
+        const linkRef = `${safeName}-${safeAmount}/${userId}`;
+        const link = `https://flexx254.github.io/trustpay-frontend/pay.html?ref=${linkRef}`;
         
         const div = document.createElement('div');
         div.className = 'product';
@@ -196,11 +182,10 @@
             <a href="${link}" target="_blank">${link}</a>
           </div>
         `;
-        productList.prepend(div); // ⬅️ Add to top
+        productList.prepend(div);
         showOverlay();
-
       } else {
-        alert(data.error || '❌ Failed to add product. Missing ID?');
+        alert(data.error || '❌ Failed to add product.');
       }
     } catch (err) {
       console.error("❌ Server error:", err);
@@ -239,7 +224,13 @@
       .forEach(prod => {
         const div = document.createElement('div');
         div.className = 'product';
-        const link = `https://flexx254.github.io/trustpay-frontend/pay.html?product_id=${prod.id}`;
+
+        // Build link from product_name, amount, and user_id
+        const safeName = encodeURIComponent(prod.product_name.replace(/\s+/g, '-'));
+        const safeAmount = encodeURIComponent(prod.amount);
+        const linkRef = `${safeName}-${safeAmount}/${prod.user_id}`;
+        const link = `https://flexx254.github.io/trustpay-frontend/pay.html?ref=${linkRef}`;
+
         div.innerHTML = `
           <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
           <div class="link">
@@ -314,8 +305,6 @@
     if (diff === 0) return "Exact amount";
     return diff > 0 ? `Overpaid by ${diff}` : `Underpaid by ${Math.abs(diff)}`;
   }
-    
-
   </script>
 </body>
   </html>
