@@ -128,38 +128,9 @@
   </div>
 
 <script>
-
-  
-document.addEventListener('DOMContentLoaded', async () => {
-  const productId = new URLSearchParams(window.location.search).get('product_id');
-  if (!productId) return;
-
-  try {
-    const res = await fetch(`https://trustpay-backend.onrender.com/check-payment-status?product_id=${productId}`);
-    const data = await res.json();
-
-    if (data.paid) {
-      const overlay = document.getElementById('overlay');
-      if (overlay) {
-        overlay.innerHTML = `
-          <div id="overlay-content">
-            <p style="color: red; font-weight: bold;">
-              ✅ This product is already marked as paid.<br>
-              Please refresh the link to start over if needed.
-            </p>
-          </div>`;
-        overlay.style.display = 'flex';
-      }
-    }
-  } catch (error) {
-    console.error('Error checking payment status:', error);
-  }
-});
-
-
   let buyerMpesa = "";
   const urlParams = new URLSearchParams(window.location.search);
-  const productId = urlParams.get('product_id');
+  const ref = urlParams.get('ref'); // e.g. Wire-36/a470f...
 
   const productInfo = document.getElementById('product-info');
   const payBtn = document.getElementById('payNow');
@@ -167,40 +138,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let product = null;
 
+  // --- Replace backend fetch with URL parser ---
   function loadProduct() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const ref = urlParams.get("ref"); 
+    if (!ref) {
+      productInfo.innerHTML = '<span class="error">Missing product info.</span>';
+      return;
+    }
 
-  if (!ref) {
-    productInfo.innerHTML = '<span class="error">Missing product details.</span>';
-    return;
+    // ref is like "Wire-36/a470f88e..."
+    const [productAndAmount] = ref.split("/");
+    const [productName, amount] = productAndAmount.split("-");
+
+    product = { product_name: productName, amount: amount };
+
+    productInfo.innerHTML = `
+      <strong>Product:</strong> ${product.product_name}<br>
+      <strong>Amount:</strong> KES ${product.amount}
+    `;
   }
 
-  // Split into "Rty-25" and "uuid"
-  const [mainPart, uniqueId] = ref.split("/");
+  payBtn.addEventListener('click', async () => {
+    const buyerName = document.getElementById('buyerName').value.trim();
+    const buyerEmail = document.getElementById('buyerEmail').value.trim();
+    buyerMpesa = document.getElementById('buyerMpesa').value.trim();
 
-  if (!mainPart) {
-    productInfo.innerHTML = '<span class="error">Invalid product details.</span>';
-    return;
-  }
+    if (!buyerName || !buyerEmail || !buyerMpesa || !product) {
+      msg.innerHTML = '<span class="error">All fields are required.</span>';
+      return;
+    }
 
-  // Split "Rty-25" into product_name and amount
-  const [productName, amount] = mainPart.split("-");
+    try {
+      const res = await fetch('https://trustpay-backend.onrender.com/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_name: product.product_name,
+          amount: product.amount,
+          buyer_name: buyerName,
+          buyer_email: buyerEmail,
+          mpesa_number: buyerMpesa,
+          status: 'held'
+        })
+      });
 
-  if (!productName || !amount) {
-    productInfo.innerHTML = '<span class="error">Invalid product details format.</span>';
-    return;
-  }
-
-  // Save globally if needed
-  product = { product_name: productName, amount: amount, product_id: uniqueId };
-
-  // Show on page
-  productInfo.innerHTML = `
-    <strong>Product:</strong> ${product.product_name}<br>
-    <strong>Amount:</strong> KES ${product.amount}
-  `;
-  }
+      if (res.ok) {
+        console.log("Overlay trigger ✅");
+        document.getElementById('overlay').style.display = 'flex';
+      } else {
+        const errorData = await res.json();
+        msg.innerHTML = `<span class="error">${errorData.error || 'Failed to update payment.'}</span>`;
+      }
+    } catch (err) {
+      msg.innerHTML = '<span class="error">Could not connect to server.</span>';
+    }
+  });
 
   function copyMpesa() {
     const number = document.getElementById('mpesa-number').innerText;
@@ -210,29 +201,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function closeOverlay() {
-  try {
-    const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({mpesa_number: buyerMpesa })
-    });
+    try {
+      const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mpesa_number: buyerMpesa })
+      });
 
-    const result = await res.json();
+      const result = await res.json();
 
-    if (result.paid) {
-      msg.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
-    } else {
-      msg.innerHTML = `<span class="error">❌ ${result.message}</span>`;
+      if (result.paid) {
+        msg.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
+      } else {
+        msg.innerHTML = `<span class="error">❌ ${result.message}</span>`;
+      }
+
+      document.getElementById('overlay').style.display = 'none';
+    } catch (error) {
+      msg.innerHTML = `<span class="error">Server error while checking payment.</span>`;
+      document.getElementById('overlay').style.display = 'none';
     }
-
-    document.getElementById('overlay').style.display = 'none';
-  } catch (error) {
-    msg.innerHTML = `<span class="error">Server error while checking payment.</span>`;
-    document.getElementById('overlay').style.display = 'none';
   }
-}
 
   window.addEventListener('load', loadProduct);
 </script>
 </body>
-</html>
+  </html>
