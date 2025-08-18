@@ -167,64 +167,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let product = null;
 
-  async function loadProduct() {
-    if (!productId) {
-      productInfo.innerHTML = '<span class="error">Missing product ID.</span>';
-      return;
-    }
+  function loadProduct() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get("ref"); 
 
-    try {
-      const res = await fetch(`https://trustpay-backend.onrender.com/product-details?product_id=${productId}`);
-      const data = await res.json();
-
-      if (res.ok) {
-        product = data;
-        productInfo.innerHTML = `
-          <strong>Product:</strong> ${product.product_name}<br>
-          <strong>Amount:</strong> KES ${product.amount}
-        `;
-      } else {
-        productInfo.innerHTML = `<span class="error">${data.error || 'Product not found.'}</span>`;
-      }
-    } catch (err) {
-      productInfo.innerHTML = '<span class="error">Server error. Please try again later.</span>';
-    }
+  if (!ref) {
+    productInfo.innerHTML = '<span class="error">Missing product details.</span>';
+    return;
   }
 
-  payBtn.addEventListener('click', async () => {
-    const buyerName = document.getElementById('buyerName').value.trim();
-    const buyerEmail = document.getElementById('buyerEmail').value.trim();
-    buyerMpesa = document.getElementById('buyerMpesa').value.trim();
+  // Split into "Rty-25" and "uuid"
+  const [mainPart, uniqueId] = ref.split("/");
 
-    if (!buyerName || !buyerEmail || !buyerMpesa || !product) {
-      msg.innerHTML = '<span class="error">All fields are required.</span>';
-      return;
-    }
+  if (!mainPart) {
+    productInfo.innerHTML = '<span class="error">Invalid product details.</span>';
+    return;
+  }
 
-    try {
-      const res = await fetch('https://trustpay-backend.onrender.com/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product_id: productId,
-          buyer_name: buyerName,
-          buyer_email: buyerEmail,
-          mpesa_number: buyerMpesa,
-          status: 'held'
-        })
-      });
+  // Split "Rty-25" into product_name and amount
+  const [productName, amount] = mainPart.split("-");
 
-      if (res.ok) {
-        // Show overlay instead of link
-        document.getElementById('overlay').style.display = 'flex';
-      } else {
-        const errorData = await res.json();
-        msg.innerHTML = `<span class="error">${errorData.error || 'Failed to update payment.'}</span>`;
-      }
-    } catch (err) {
-      msg.innerHTML = '<span class="error">Could not connect to server.</span>';
-    }
-  });
+  if (!productName || !amount) {
+    productInfo.innerHTML = '<span class="error">Invalid product details format.</span>';
+    return;
+  }
+
+  // Save globally if needed
+  product = { product_name: productName, amount: amount, product_id: uniqueId };
+
+  // Show on page
+  productInfo.innerHTML = `
+    <strong>Product:</strong> ${product.product_name}<br>
+    <strong>Amount:</strong> KES ${product.amount}
+  `;
+  }
 
   function copyMpesa() {
     const number = document.getElementById('mpesa-number').innerText;
