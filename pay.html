@@ -138,23 +138,26 @@
 
   let product = null;
 
-  // --- Replace backend fetch with URL parser ---
   function loadProduct() {
-    if (!ref) {
-      productInfo.innerHTML = '<span class="error">Missing product info.</span>';
-      return;
-    }
+  if (!ref) {
+    productInfo.innerHTML = '<span class="error">Missing product info.</span>';
+    return;
+  }
+// ref is like "Wire-36/USER123"
+const [productAndAmount, userId] = ref.split("/");
+const [productName, amount] = productAndAmount.split("-");
 
-    // ref is like "Wire-36/a470f88e..."
-    const [productAndAmount] = ref.split("/");
-    const [productName, amount] = productAndAmount.split("-");
+product = { 
+  product_name: productName, 
+  amount: amount, 
+  user_id: userId   // ✅ now captured correctly
+};
+  
 
-    product = { product_name: productName, amount: amount };
-
-    productInfo.innerHTML = `
-      <strong>Product:</strong> ${product.product_name}<br>
-      <strong>Amount:</strong> KES ${product.amount}
-    `;
+  productInfo.innerHTML = `
+    <strong>Product:</strong> ${product.product_name}<br>
+    <strong>Amount:</strong> KES ${product.amount}
+  `;
   }
 
   payBtn.addEventListener('click', async () => {
@@ -172,13 +175,14 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          product_name: product.product_name,
-          amount: product.amount,
-          buyer_name: buyerName,
-          buyer_email: buyerEmail,
-          mpesa_number: buyerMpesa,
-          status: 'held'
-        })
+  product_name: product.product_name,
+  amount: product.amount,
+  buyer_name: buyerName,
+  buyer_email: buyerEmail,
+  mpesa_number: buyerMpesa,
+  user_id: product.user_id,
+  status: 'held'
+})
       });
 
       if (res.ok) {
