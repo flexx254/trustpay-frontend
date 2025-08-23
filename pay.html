@@ -152,6 +152,11 @@ product = {
   amount: parseFloat(amountStr), 
   user_id: userId   // ✅ now captured correctly
 };
+
+  if (isNaN(product.amount)) {
+  productInfo.innerHTML = '<span class="error">Invalid amount in link.</span>';
+  return;
+}
   
 
   productInfo.innerHTML = `
