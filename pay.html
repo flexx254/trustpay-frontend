@@ -145,11 +145,11 @@
   }
 // ref is like "Wire-36/USER123"
 const [productAndAmount, userId] = ref.split("/");
-const [productName, amount] = productAndAmount.split("-");
+const [productName, amountStr] = productAndAmount.split("-");
 
 product = { 
   product_name: productName, 
-  amount: amount, 
+  amount: parseFloat(amountStr), 
   user_id: userId   // ✅ now captured correctly
 };
   
