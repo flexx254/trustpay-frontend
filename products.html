@@ -135,8 +135,7 @@
     <h3>Buyer Transactions</h3>
     <div class="transaction-list" id="transactionList">Waiting for buyer engagement...</div>
   </div>
-
-  <script>
+<script>
 const userId = localStorage.getItem('user_id');
 const fullName = localStorage.getItem('full_name');
 const productList = document.getElementById('productList');
@@ -146,8 +145,10 @@ const overlay = document.getElementById('overlay');
 
 if (!userId) {
   productList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
+  transactionList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
 }
 
+// ✅ Add product
 document.getElementById('addProduct').addEventListener('click', async () => {
   const name = document.getElementById('productName').value.trim();
   const amount = document.getElementById('amount').value.trim();
@@ -185,7 +186,7 @@ document.getElementById('addProduct').addEventListener('click', async () => {
       productList.prepend(div);
 
       showOverlay();
-      await fetchProducts(); // ✅ Refresh list so ALL products are shown
+      await fetchProducts(); // refresh list
     } else {
       alert(data.error || '❌ Failed to add product.');
     }
@@ -200,6 +201,7 @@ function showOverlay() {
   setTimeout(() => overlay.style.display = 'none', 2500);
 }
 
+// ✅ Fetch products (independent)
 async function fetchProducts() {
   const uid = await waitForUserId();
   if (!uid) {
@@ -213,7 +215,6 @@ async function fetchProducts() {
 
     if (Array.isArray(data) && data.length > 0) {
       renderProducts(data);
-      renderTransactions(data);
     } else {
       productList.innerHTML = '<p style="color:red;">No products found.</p>';
     }
@@ -225,63 +226,75 @@ async function fetchProducts() {
 
 function renderProducts(products) {
   productList.innerHTML = '';
-  products
-    .sort((a, b) => {
-      const priority = { 'paid-released': 0, 'paid-held': 1 };
-      return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
-    })
-    .forEach(prod => {
-      const div = document.createElement('div');
-      div.className = 'product';
+  products.forEach(prod => {
+    const div = document.createElement('div');
+    div.className = 'product';
 
-      const safeName = encodeURIComponent(prod.product_name.replace(/\s+/g, '-'));
-      const safeAmount = encodeURIComponent(prod.amount);
-      const linkRef = `${safeName}-${safeAmount}/${prod.user_id}`;
-      const link = `https://flexx254.github.io/trustpay-frontend/pay.html?ref=${linkRef}`;
+    const safeName = encodeURIComponent(prod.product_name.replace(/\s+/g, '-'));
+    const safeAmount = encodeURIComponent(prod.amount);
+    const linkRef = `${safeName}-${safeAmount}/${prod.user_id}`;
+    const link = `https://flexx254.github.io/trustpay-frontend/pay.html?ref=${linkRef}`;
 
-      div.innerHTML = `
-        <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
-        <div class="link">
-          <strong>Client Link:</strong><br>
-          <a href="${link}" target="_blank">${link}</a>
-        </div>
-      `;
-      productList.appendChild(div);
-    });
-}
-
-function renderTransactions(products) {
-  transactionList.innerHTML = '';
-  const sorted = [...products].sort((a, b) => {
-    const priority = { 'paid-released': 0, 'paid-held': 1 };
-    return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
+    div.innerHTML = `
+      <div class="product-title">${prod.product_name} - KES ${prod.amount}</div>
+      <div class="link">
+        <strong>Client Link:</strong><br>
+        <a href="${link}" target="_blank">${link}</a>
+      </div>
+    `;
+    productList.appendChild(div);
   });
-
-  sorted
-    .filter(prod => prod.buyer_name || prod.mpesa_number || prod.status !== 'pending')
-    .forEach(prod => {
-      const div = document.createElement('div');
-      const statusClass = prod.status === 'paid-released' ? 'status-paid-released'
-                        : prod.status === 'paid-held' ? 'status-paid-held'
-                        : 'status-pending';
-
-      div.className = 'product';
-      div.innerHTML = `
-        <div><strong>Product:</strong> ${prod.product_name}</div>
-        <div><strong>Buyer:</strong> ${prod.buyer_name || '—'}</div>
-        <div><strong>Phone:</strong> ${prod.mpesa_number || '—'}</div>
-        <div class="status-box ${statusClass}">${prod.status || 'pending'}</div>
-        <div><strong>Expected:</strong> KES ${prod.amount}</div>
-        <div><strong>Paid:</strong> KES ${prod.amount_paid ?? '—'}</div>
-        <div><strong>Difference:</strong> ${prod.amount_paid != null ? getPaymentDiff(prod.amount_paid, prod.amount) + ' KES' : '—'}</div>
-      `;
-      transactionList.appendChild(div);
-    });
 }
 
+// ✅ Fetch buyer transactions (independent)
+async function fetchBuyerTransactions() {
+  const uid = await waitForUserId();
+  if (!uid) {
+    transactionList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
+    return;
+  }
+  try {
+    const res = await fetch(`https://trustpay-backend.onrender.com/buyer-transactions?user_id=${encodeURIComponent(uid)}`);
+    const data = await res.json();
+    console.log("💰 Transactions fetched:", data);
+
+    if (Array.isArray(data) && data.length > 0) {
+      renderTransactions(data);
+    } else {
+      transactionList.innerHTML = '<p style="color:red;">No buyer transactions found.</p>';
+    }
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    transactionList.innerHTML = '<p style="color:red;">Server error.</p>';
+  }
+}
+
+function renderTransactions(transactions) {
+  transactionList.innerHTML = '';
+  transactions.forEach(prod => {
+    const statusClass = prod.status === 'paid-released' ? 'status-paid-released'
+                      : prod.status === 'paid-held' ? 'status-paid-held'
+                      : 'status-pending';
+
+    const div = document.createElement('div');
+    div.className = 'product';
+    div.innerHTML = `
+      <div><strong>Product:</strong> ${prod.product_name}</div>
+      <div><strong>Buyer:</strong> ${prod.buyer_name || '—'}</div>
+      <div><strong>Phone:</strong> ${prod.mpesa_number || '—'}</div>
+      <div class="status-box ${statusClass}">${prod.status || 'pending'}</div>
+      <div><strong>Expected:</strong> KES ${prod.amount}</div>
+      <div><strong>Paid:</strong> KES ${prod.amount_paid ?? '—'}</div>
+      <div><strong>Difference:</strong> ${prod.amount_paid != null ? getPaymentDiff(prod.amount_paid, prod.amount) + ' KES' : '—'}</div>
+    `;
+    transactionList.appendChild(div);
+  });
+}
+
+// ✅ Search only applies to products
 searchInput.addEventListener('input', () => {
   const term = searchInput.value.toLowerCase();
-  const products = document.querySelectorAll('.product');
+  const products = document.querySelectorAll('.product-list .product');
   products.forEach(p => {
     const title = p.querySelector('.product-title')?.textContent.toLowerCase() || '';
     p.style.display = title.includes(term) ? '' : 'none';
@@ -299,20 +312,23 @@ async function waitForUserId() {
   return uid;
 }
 
+// ✅ Run both on page load
 window.addEventListener('load', async () => {
   const uid = await waitForUserId();
   if (!uid) {
     productList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
+    transactionList.innerHTML = '<p style="color:red;">You are not logged in.</p>';
     return;
   }
-  await fetchProducts();
+  fetchProducts();
+  fetchBuyerTransactions();
 });
 
 function getPaymentDiff(paid, expected) {
   const diff = paid - expected;
   if (diff === 0) return "Exact amount";
   return diff > 0 ? `Overpaid by ${diff}` : `Underpaid by ${Math.abs(diff)}`;
-    }
-  </script>
+}
+</script>
 </body>
   </html>
