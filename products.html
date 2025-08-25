@@ -207,7 +207,7 @@ async function fetchProducts() {
     return;
   }
   try {
-    const res = await fetch(`https://trustpay-backend.onrender.com/products?user_id=${encodeURIComponent(uid)}`);
+    const res = await fetch(`https://trustpay-backend.onrender.com/products-page?user_id=${encodeURIComponent(uid)}`);
     const data = await res.json();
     console.log("📦 Products fetched:", data);
 
