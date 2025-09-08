@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pay Balance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    form {
+      display: inline-block;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    input {
+      display: block;
+      margin: 10px auto;
+      padding: 8px;
+      width: 80%;
+    }
+    button {
+      padding: 10px 20px;
+      background: orange;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>💳 Pay Your Balance</h2>
+  <form id="balanceForm">
+    <input type="text" id="product_name" name="product_name" readonly>
+    <input type="text" id="total_amount" name="total_amount" readonly>
+    <input type="text" id="amount_paid" name="amount_paid" readonly>
+    <input type="text" id="balance_due" name="balance_due" readonly>
+    <input type="text" id="mpesa_number" name="mpesa_number" placeholder="Enter your M-Pesa number">
+    <button type="submit">Pay Balance</button>
+  </form>
+
+  <script>
+    async function loadPayment() {
+      const params = new URLSearchParams(window.location.search);
+      const paymentId = params.get("payment_id");
+      if (!paymentId) {
+        alert("❌ No payment ID provided.");
+        return;
+      }
+
+      try {
+        // Fetch payment details
+        const res = await fetch(`https://trustpay-backend.onrender.com/payment-details/${paymentId}`);
+        const data = await res.json();
+
+        if (data.error) {
+          alert("Error: " + data.error);
+          return;
+        }
+
+        // Autofill form fields
+        document.getElementById("product_name").value = data.product_name;
+        document.getElementById("total_amount").value = "KES " + data.amount;
+        document.getElementById("amount_paid").value = "KES " + data.amount_paid;
+        document.getElementById("balance_due").value = "KES " + (data.amount - data.amount_paid);
+        document.getElementById("mpesa_number").value = data.mpesa_number;
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load payment details.");
+      }
+    }
+
+    // Submit balance payment
+    document.getElementById("balanceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alert("✅ Payment request submitted. Please complete via M-Pesa.");
+      // Optionally call backend to trigger M-Pesa STK push here
+    });
+
+    loadPayment();
+  </script>
+</body>
+</html>
