@@ -2,84 +2,237 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pay Balance</title>
+  <title>TrustPay - Pay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
       text-align: center;
-      margin-top: 50px;
+      color: #1e293b;
     }
-    form {
-      display: inline-block;
-      padding: 20px;
-      border: 1px solid #ccc;
+
+    .info {
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      color: #475569;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 0.9rem;
+      margin-bottom: 1rem;
+      border: 1px solid #cbd5e1;
       border-radius: 8px;
+      font-size: 1rem;
     }
-    input {
-      display: block;
-      margin: 10px auto;
-      padding: 8px;
-      width: 80%;
-    }
+
     button {
-      padding: 10px 20px;
-      background: orange;
+      width: 100%;
+      background: #0f766e;
       color: white;
+      font-weight: bold;
       border: none;
-      border-radius: 5px;
+      padding: 1rem;
+      border-radius: 8px;
       cursor: pointer;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 1rem;
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+
+    /* Overlay styles */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #overlay-content {
+      background: white;
+      color: #1e293b;
+      padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 90%;
+      width: 400px;
+    }
+
+    #mpesa-number {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin: 1rem 0;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-left: 0.5rem;
     }
   </style>
 </head>
 <body>
-  <h2>💳 Pay Your Balance</h2>
-  <form id="balanceForm">
-    <input type="text" id="product_name" name="product_name" readonly>
-    <input type="text" id="total_amount" name="total_amount" readonly>
-    <input type="text" id="amount_paid" name="amount_paid" readonly>
-    <input type="text" id="balance_due" name="balance_due" readonly>
-    <input type="text" id="mpesa_number" name="mpesa_number" placeholder="Enter your M-Pesa number">
-    <button type="submit">Pay Balance</button>
-  </form>
+  <div class="container">
+    <h2>Complete Your Payment</h2>
+    <div class="info" id="product-info">Loading product...</div>
 
-  <script>
-    async function loadPayment() {
-      const params = new URLSearchParams(window.location.search);
-      const paymentId = params.get("payment_id");
-      if (!paymentId) {
-        alert("❌ No payment ID provided.");
-        return;
-      }
+    <input type="text" id="buyerName" placeholder="Your Full Name" required />
+    <input type="email" id="buyerEmail" placeholder="Your Email" required />
+    <input type="text" id="buyerMpesa" placeholder="Your M-PESA Number" required />
+    <button id="payNow">Submit</button>
 
-      try {
-        // Fetch payment details
-        const res = await fetch(`https://trustpay-backend.onrender.com/payment-details/${paymentId}`);
-        const data = await res.json();
+    <div class="message" id="payment-msg"></div>
+  </div>
 
-        if (data.error) {
-          alert("Error: " + data.error);
-          return;
-        }
+  <!-- Payment Overlay -->
+  <div id="overlay">
+    <div id="overlay-content">
+      <h3>Searching for Payment...</h3>
+      <p>Send the payment to the following M-PESA number:</p>
+      <div style="display:flex; justify-content:center; align-items:center;">
+        <span id="mpesa-number">0728639425</span>
+        <button class="copy-btn" onclick="copyMpesa()">📋</button>
+      </div>
+      <p>Once done, come back and click below:</p>
+      <button onclick="closeOverlay()">I Have Paid</button>
+    </div>
+  </div>
 
-        // Autofill form fields
-        document.getElementById("product_name").value = data.product_name;
-        document.getElementById("total_amount").value = "KES " + data.amount;
-        document.getElementById("amount_paid").value = "KES " + data.amount_paid;
-        document.getElementById("balance_due").value = "KES " + (data.amount - data.amount_paid);
-        document.getElementById("mpesa_number").value = data.mpesa_number;
-      } catch (err) {
-        console.error(err);
-        alert("Failed to load payment details.");
-      }
+<script>
+  let buyerMpesa = "";
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get('ref'); // e.g. Wire-36/a470f...
+
+  const productInfo = document.getElementById('product-info');
+  const payBtn = document.getElementById('payNow');
+  const msg = document.getElementById('payment-msg');
+
+  let product = null;
+
+  function loadProduct() {
+  if (!ref) {
+    productInfo.innerHTML = '<span class="error">Missing product info.</span>';
+    return;
+  }
+// ref is like "Wire-36/USER123"
+const [productAndAmount, userId] = ref.split("/");
+const [productName, amountStr] = productAndAmount.split("-");
+
+product = { 
+  product_name: productName, 
+  amount: parseFloat(amountStr), 
+  user_id: userId   // ✅ now captured correctly
+};
+
+  if (isNaN(product.amount)) {
+  productInfo.innerHTML = '<span class="error">Invalid amount in link.</span>';
+  return;
+}
+  
+
+  productInfo.innerHTML = `
+    <strong>Product:</strong> ${product.product_name}<br>
+    <strong>Amount:</strong> KES ${product.amount}
+  `;
+  }
+
+  payBtn.addEventListener('click', async () => {
+    const buyerName = document.getElementById('buyerName').value.trim();
+    const buyerEmail = document.getElementById('buyerEmail').value.trim();
+    buyerMpesa = document.getElementById('buyerMpesa').value.trim();
+
+    if (!buyerName || !buyerEmail || !buyerMpesa || !product) {
+      msg.innerHTML = '<span class="error">All fields are required.</span>';
+      return;
     }
 
-    document.getElementById("balanceForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      alert("✅ Payment request submitted. Please complete via M-Pesa.");
-      // Later: call backend to trigger M-Pesa STK push
-    });
+    try {
+      const res = await fetch('https://trustpay-backend.onrender.com/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+  product_name: product.product_name,
+  amount: product.amount,
+  buyer_name: buyerName,
+  buyer_email: buyerEmail,
+  mpesa_number: buyerMpesa,
+  user_id: product.user_id,
+  status: 'held'
+})
+      });
 
-    loadPayment();
-  </script>
+      if (res.ok) {
+        console.log("Overlay trigger ✅");
+        document.getElementById('overlay').style.display = 'flex';
+      } else {
+        const errorData = await res.json();
+        msg.innerHTML = `<span class="error">${errorData.error || 'Failed to update payment.'}</span>`;
+      }
+    } catch (err) {
+      msg.innerHTML = '<span class="error">Could not connect to server.</span>';
+    }
+  });
+
+  function copyMpesa() {
+    const number = document.getElementById('mpesa-number').innerText;
+    navigator.clipboard.writeText(number).then(() => {
+      alert("M-PESA number copied to clipboard.");
+    });
+  }
+
+  async function closeOverlay() {
+    try {
+      const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mpesa_number: buyerMpesa })
+      });
+
+      const result = await res.json();
+
+      if (result.paid) {
+        msg.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
+      } else {
+        msg.innerHTML = `<span class="error">❌ ${result.message}</span>`;
+      }
+
+      document.getElementById('overlay').style.display = 'none';
+    } catch (error) {
+      msg.innerHTML = `<span class="error">Server error while checking payment.</span>`;
+      document.getElementById('overlay').style.display = 'none';
+    }
+  }
+
+  window.addEventListener('load', loadProduct);
+</script>
 </body>
-</html>
+  </html>
