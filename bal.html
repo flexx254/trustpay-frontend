@@ -73,11 +73,10 @@
       }
     }
 
-    // Submit balance payment
     document.getElementById("balanceForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       alert("✅ Payment request submitted. Please complete via M-Pesa.");
-      // Optionally call backend to trigger M-Pesa STK push here
+      // Later: call backend to trigger M-Pesa STK push
     });
 
     loadPayment();
