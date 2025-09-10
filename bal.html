@@ -163,7 +163,7 @@ async function loadPayment() {
       buyerMpesa = payment.mpesa_number;
     }
   } catch (err) {
-    paymentInfo.innerHTML = '<span class="error">Server error while loading payment.</span>';
+    paymentInfo.innerHTML = '<span class="error"erver error while loading payment.</span>';
   }
 }
 
@@ -177,28 +177,22 @@ payBtn.addEventListener("click", async () => {
     return;
   }
 
-  const balance = (payment.amount - payment.amount_paid).toFixed(2);
-
   try {
-    const res = await fetch("https://trustpay-backend.onrender.com/create-payment", {
+    const res = await fetch(`https://trustpay-backend.onrender.com/update-payment/${payment.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        product_name: payment.product_name,
-        amount: balance,
-        buyer_name: buyerName,
-        buyer_email: buyerEmail,
-        mpesa_number: buyerMpesa,
-        user_id: payment.user_id,
-        status: "held"
+        mpesa_number: buyerMpesa
       })
     });
 
+    const result = await res.json();
+
     if (res.ok) {
       document.getElementById("overlay").style.display = "flex";
+      msg.innerHTML = `<span style="color: green;">✅ Payment updated. Status: ${result.status}</span>`;
     } else {
-      const errorData = await res.json();
-      msg.innerHTML = `<span class="error">${errorData.error || "Failed to create balance payment."}</span>`;
+      msg.innerHTML = `<span class="error">${result.error || "Failed to update balance payment."}</span>`;
     }
   } catch (err) {
     msg.innerHTML = '<span class="error">Could not connect to server.</span>';
