@@ -116,113 +116,125 @@
   </div>
 
 <script>
-  let buyerMpesa = "";
-  const urlParams = new URLSearchParams(window.location.search);
-  const paymentId = urlParams.get("payment_id");
+ let buyerMpesa = "";
+const urlParams = new URLSearchParams(window.location.search);
+const paymentId = urlParams.get("payment_id");
 
-  const paymentInfo = document.getElementById("payment-info");
-  const payBtn = document.getElementById("payNow");
-  const msg = document.getElementById("payment-msg");
+const paymentInfo = document.getElementById("payment-info");
+const payBtn = document.getElementById("payNow");
+const msg = document.getElementById("payment-msg");
 
-  let payment = null;
+let payment = null;
 
-  async function loadPayment() {
-    if (!paymentId) {
-      paymentInfo.innerHTML = '<span class="error">Missing payment ID.</span>';
-      return;
-    }
-
-    try {
-      const res = await fetch(`https://trustpay-backend.onrender.com/get-payment/${paymentId}`);
-
-      const data = await res.json();
-      if (!res.ok) {
-        paymentInfo.innerHTML = `<span class="error">${data.error || "Failed to load payment"}</span>`;
-        return;
-      }
-
-      payment = data;
-      const balance = (payment.amount - payment.amount_paid).toFixed(2);
-
-      paymentInfo.innerHTML = `
-        <strong>Product:</strong> ${payment.product_name}<br>
-        <strong>Total:</strong> KES ${payment.amount}<br>
-        <strong>Already Paid:</strong> KES ${payment.amount_paid}<br>
-        <strong>Balance:</strong> <span style="color:red">KES ${balance}</span>
-      `;
-    } catch (err) {
-      paymentInfo.innerHTML = '<span class="error">Server error while loading payment.</span>';
-    }
+async function loadPayment() {
+  if (!paymentId) {
+    paymentInfo.innerHTML = '<span class="error">Missing payment ID.</span>';
+    return;
   }
 
-  payBtn.addEventListener("click", async () => {
-    const buyerName = document.getElementById("buyerName").value.trim();
-    const buyerEmail = document.getElementById("buyerEmail").value.trim();
-    buyerMpesa = document.getElementById("buyerMpesa").value.trim();
+  try {
+    const res = await fetch(`https://trustpay-backend.onrender.com/get-payment/${paymentId}`);
+    const data = await res.json();
 
-    if (!buyerName || !buyerEmail || !buyerMpesa || !payment) {
-      msg.innerHTML = '<span class="error">All fields are required.</span>';
+    if (!res.ok) {
+      paymentInfo.innerHTML = `<span class="error">${data.error || "Failed to load payment"}</span>`;
       return;
     }
 
+    payment = data;
     const balance = (payment.amount - payment.amount_paid).toFixed(2);
 
-    try {
-      const res = await fetch("https://trustpay-backend.onrender.com/create-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_name: payment.product_name,
-          amount: balance,
-          buyer_name: buyerName,
-          buyer_email: buyerEmail,
-          mpesa_number: buyerMpesa,
-          user_id: payment.user_id,
-          status: "held"
-        })
-      });
+    paymentInfo.innerHTML = `
+      <strong>Product:</strong> ${payment.product_name}<br>
+      <strong>Total:</strong> KES ${payment.amount}<br>
+      <strong>Already Paid:</strong> KES ${payment.amount_paid}<br>
+      <strong>Balance:</strong> <span style="color:red">KES ${balance}</span>
+    `;
 
-      if (res.ok) {
-        document.getElementById("overlay").style.display = "flex";
-      } else {
-        const errorData = await res.json();
-        msg.innerHTML = `<span class="error">${errorData.error || "Failed to create balance payment."}</span>`;
-      }
-    } catch (err) {
-      msg.innerHTML = '<span class="error">Could not connect to server.</span>';
+    // ✅ Autofill buyer details
+    if (payment.buyer_name) {
+      document.getElementById("buyerName").value = payment.buyer_name;
     }
-  });
+    if (payment.buyer_email) {
+      document.getElementById("buyerEmail").value = payment.buyer_email;
+    }
+    if (payment.mpesa_number) {
+      document.getElementById("buyerMpesa").value = payment.mpesa_number;
+      buyerMpesa = payment.mpesa_number;
+    }
+  } catch (err) {
+    paymentInfo.innerHTML = '<span class="error">Server error while loading payment.</span>';
+  }
+}
 
-  function copyMpesa() {
-    const number = document.getElementById("mpesa-number").innerText;
-    navigator.clipboard.writeText(number).then(() => {
-      alert("M-PESA number copied to clipboard.");
+payBtn.addEventListener("click", async () => {
+  const buyerName = document.getElementById("buyerName").value.trim();
+  const buyerEmail = document.getElementById("buyerEmail").value.trim();
+  buyerMpesa = document.getElementById("buyerMpesa").value.trim();
+
+  if (!buyerName || !buyerEmail || !buyerMpesa || !payment) {
+    msg.innerHTML = '<span class="error">All fields are required.</span>';
+    return;
+  }
+
+  const balance = (payment.amount - payment.amount_paid).toFixed(2);
+
+  try {
+    const res = await fetch("https://trustpay-backend.onrender.com/create-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_name: payment.product_name,
+        amount: balance,
+        buyer_name: buyerName,
+        buyer_email: buyerEmail,
+        mpesa_number: buyerMpesa,
+        user_id: payment.user_id,
+        status: "held"
+      })
     });
-  }
 
-  async function closeOverlay() {
-    try {
-      const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mpesa_number: buyerMpesa })
-      });
-      const result = await res.json();
-
-      if (result.paid) {
-        msg.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
-      } else {
-        msg.innerHTML = `<span class="error">❌ ${result.message}</span>`;
-      }
-
-      document.getElementById("overlay").style.display = "none";
-    } catch (error) {
-      msg.innerHTML = `<span class="error">Server error while checking payment.</span>`;
-      document.getElementById("overlay").style.display = "none";
+    if (res.ok) {
+      document.getElementById("overlay").style.display = "flex";
+    } else {
+      const errorData = await res.json();
+      msg.innerHTML = `<span class="error">${errorData.error || "Failed to create balance payment."}</span>`;
     }
+  } catch (err) {
+    msg.innerHTML = '<span class="error">Could not connect to server.</span>';
   }
+});
 
-  window.addEventListener("load", loadPayment);
+function copyMpesa() {
+  const number = document.getElementById("mpesa-number").innerText;
+  navigator.clipboard.writeText(number).then(() => {
+    alert("M-PESA number copied to clipboard.");
+  });
+}
+
+async function closeOverlay() {
+  try {
+    const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mpesa_number: buyerMpesa })
+    });
+    const result = await res.json();
+
+    if (result.paid) {
+      msg.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
+    } else {
+      msg.innerHTML = `<span class="error">❌ ${result.message}</span>`;
+    }
+
+    document.getElementById("overlay").style.display = "none";
+  } catch (error) {
+    msg.innerHTML = `<span class="error">Server error while checking payment.</span>`;
+    document.getElementById("overlay").style.display = "none";
+  }
+}
+
+window.addEventListener("load", loadPayment); 
 </script>
 </body>
 </html>
