@@ -133,7 +133,8 @@
     }
 
     try {
-      const res = await fetch(`https://trustpay-backend.onrender.com/get-payment?payment_id=${paymentId}`);
+      const res = await fetch(`https://trustpay-backend.onrender.com/get-payment/${paymentId}`);
+
       const data = await res.json();
       if (!res.ok) {
         paymentInfo.innerHTML = `<span class="error">${data.error || "Failed to load payment"}</span>`;
