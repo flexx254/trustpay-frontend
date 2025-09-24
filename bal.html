@@ -211,7 +211,9 @@ async function closeOverlay() {
     const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mpesa_number: buyerMpesa })
+      body: JSON.stringify({mpesa_number: buyerMpesa,
+  payment_id: payment.id
+})
     });
     const result = await res.json();
 
