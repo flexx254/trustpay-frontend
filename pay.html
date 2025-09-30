@@ -129,8 +129,8 @@
 
 <script>
   let buyerMpesa = "";
-  let paymentId = "";
-  let token = "";
+  let paymentId = null;     // ✅ store returned ID
+  let authToken = null;     // ✅ store returned secure token
 
   const urlParams = new URLSearchParams(window.location.search);
   const ref = urlParams.get('ref'); // e.g. Wire-36/a470f...
@@ -153,7 +153,7 @@
     product = { 
       product_name: productName, 
       amount: parseFloat(amountStr), 
-      user_id: userId
+      user_id: userId   // ✅ now captured correctly
     };
 
     if (isNaN(product.amount)) {
@@ -192,16 +192,17 @@
         })
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        paymentId = data.payment_id; // ✅ secure ID
-        token = data.token; // ✅ secure token
+      const data = await res.json();
 
-        console.log("Overlay trigger ✅");
+      if (res.ok) {
+        // ✅ Save identifiers for secure follow-up
+        paymentId = data.payment.id;
+        authToken = data.payment.auth_token;
+
+        console.log("Overlay trigger ✅ Payment ID:", paymentId);
         document.getElementById('overlay').style.display = 'flex';
       } else {
-        const errorData = await res.json();
-        msg.innerHTML = `<span class="error">${errorData.error || 'Failed to update payment.'}</span>`;
+        msg.innerHTML = `<span class="error">${data.error || 'Failed to update payment.'}</span>`;
       }
     } catch (err) {
       msg.innerHTML = '<span class="error">Could not connect to server.</span>';
@@ -221,8 +222,9 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          payment_id: paymentId,
-          token: token
+          mpesa_number: buyerMpesa,
+          payment_id: paymentId,    // ✅ secure check
+          auth_token: authToken     // ✅ secure check
         })
       });
 
