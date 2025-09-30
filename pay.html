@@ -129,6 +129,9 @@
 
 <script>
   let buyerMpesa = "";
+  let paymentId = "";
+  let token = "";
+
   const urlParams = new URLSearchParams(window.location.search);
   const ref = urlParams.get('ref'); // e.g. Wire-36/a470f...
 
@@ -139,30 +142,29 @@
   let product = null;
 
   function loadProduct() {
-  if (!ref) {
-    productInfo.innerHTML = '<span class="error">Missing product info.</span>';
-    return;
-  }
-// ref is like "Wire-36/USER123"
-const [productAndAmount, userId] = ref.split("/");
-const [productName, amountStr] = productAndAmount.split("-");
+    if (!ref) {
+      productInfo.innerHTML = '<span class="error">Missing product info.</span>';
+      return;
+    }
+    // ref is like "Wire-36/USER123"
+    const [productAndAmount, userId] = ref.split("/");
+    const [productName, amountStr] = productAndAmount.split("-");
 
-product = { 
-  product_name: productName, 
-  amount: parseFloat(amountStr), 
-  user_id: userId   // ✅ now captured correctly
-};
+    product = { 
+      product_name: productName, 
+      amount: parseFloat(amountStr), 
+      user_id: userId
+    };
 
-  if (isNaN(product.amount)) {
-  productInfo.innerHTML = '<span class="error">Invalid amount in link.</span>';
-  return;
-}
-  
+    if (isNaN(product.amount)) {
+      productInfo.innerHTML = '<span class="error">Invalid amount in link.</span>';
+      return;
+    }
 
-  productInfo.innerHTML = `
-    <strong>Product:</strong> ${product.product_name}<br>
-    <strong>Amount:</strong> KES ${product.amount}
-  `;
+    productInfo.innerHTML = `
+      <strong>Product:</strong> ${product.product_name}<br>
+      <strong>Amount:</strong> KES ${product.amount}
+    `;
   }
 
   payBtn.addEventListener('click', async () => {
@@ -180,17 +182,21 @@ product = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-  product_name: product.product_name,
-  amount: product.amount,
-  buyer_name: buyerName,
-  buyer_email: buyerEmail,
-  mpesa_number: buyerMpesa,
-  user_id: product.user_id,
-  status: 'held'
-})
+          product_name: product.product_name,
+          amount: product.amount,
+          buyer_name: buyerName,
+          buyer_email: buyerEmail,
+          mpesa_number: buyerMpesa,
+          user_id: product.user_id,
+          status: 'held'
+        })
       });
 
       if (res.ok) {
+        const data = await res.json();
+        paymentId = data.payment_id; // ✅ secure ID
+        token = data.token; // ✅ secure token
+
         console.log("Overlay trigger ✅");
         document.getElementById('overlay').style.display = 'flex';
       } else {
@@ -214,7 +220,10 @@ product = {
       const res = await fetch("https://trustpay-backend.onrender.com/check-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mpesa_number: buyerMpesa })
+        body: JSON.stringify({ 
+          payment_id: paymentId,
+          token: token
+        })
       });
 
       const result = await res.json();
@@ -235,4 +244,4 @@ product = {
   window.addEventListener('load', loadProduct);
 </script>
 </body>
-  </html>
+</html>
